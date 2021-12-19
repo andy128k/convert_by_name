@@ -1,5 +1,8 @@
 # Convert by name
 
+[![Crates.io Status](https://img.shields.io/crates/v/convert_by_name.svg)](https://crates.io/crates/convert_by_name)
+[![docs.rs](https://img.shields.io/docsrs/convert_by_name)](https://docs.rs/convert_by_name)
+
 Procedural macros to derive `std::convert::From` and `std::convert::Into` implementations based on field/variant names.
 The crate supports `struct`s and `enum`s only. `union`s are not supported.
 
