@@ -1,0 +1,30 @@
+name: Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - nightly
+          - stable
+
+    env:
+      RUST_BACKTRACE: 1
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: clippy, rustfmt
+          override: true
+
+      - run: cargo clippy --all --all-features
+      - run: cargo fmt --all -- --check
+      - run: cargo build --verbose
+      - run: cargo test --no-fail-fast --verbose -- --nocapture
