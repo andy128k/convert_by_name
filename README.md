@@ -8,8 +8,6 @@ The crate supports `struct`s and `enum`s only. `union`s are not supported.
 
 ## Examples
 
-### Deriving `From`
-
 ```rust
 #[derive(PartialEq, Debug)]
 struct Point2D {
