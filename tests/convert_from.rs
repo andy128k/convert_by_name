@@ -1,4 +1,4 @@
-use convert_by_name::ByNameFrom;
+use convert_by_name::ConvertByName;
 
 #[test]
 fn test_from_struct() {
@@ -7,8 +7,8 @@ fn test_from_struct() {
         y: i32,
     }
 
-    #[derive(PartialEq, Debug, ByNameFrom)]
-    #[by_name_from(Point2D)]
+    #[derive(PartialEq, Debug, ConvertByName)]
+    #[from(Point2D)]
     struct Vec2D {
         x: i32,
         y: i32,
@@ -21,8 +21,8 @@ fn test_from_struct() {
 fn test_from_tuple_struct() {
     struct Point2D(i32, i32);
 
-    #[derive(PartialEq, Debug, ByNameFrom)]
-    #[by_name_from(Point2D)]
+    #[derive(PartialEq, Debug, ConvertByName)]
+    #[from(Point2D)]
     struct Vec2D(i32, i32);
 
     assert_eq!(Vec2D::from(Point2D(3, 4)), Vec2D(3, 4));
@@ -32,8 +32,8 @@ fn test_from_tuple_struct() {
 fn test_from_nested_conversions() {
     struct Point2D(i32, i32);
 
-    #[derive(PartialEq, Debug, ByNameFrom)]
-    #[by_name_from(Point2D)]
+    #[derive(PartialEq, Debug, ConvertByName)]
+    #[from(Point2D)]
     struct Vec2D(f64, f64);
 
     assert_eq!(Vec2D::from(Point2D(3, 4)), Vec2D(3.0, 4.0));
@@ -47,8 +47,8 @@ fn test_from_plain_enum() {
         Blue,
     }
 
-    #[derive(PartialEq, Debug, ByNameFrom)]
-    #[by_name_from(ColorSrc)]
+    #[derive(PartialEq, Debug, ConvertByName)]
+    #[from(ColorSrc)]
     enum ColorDst {
         Red,
         Green,
@@ -68,8 +68,8 @@ fn test_from_enum() {
         Blue,
     }
 
-    #[derive(PartialEq, Debug, ByNameFrom)]
-    #[by_name_from(ColorSrc)]
+    #[derive(PartialEq, Debug, ConvertByName)]
+    #[from(ColorSrc)]
     enum ColorDst {
         Red(f64),
         Green { level: i32 },

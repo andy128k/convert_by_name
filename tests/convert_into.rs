@@ -1,9 +1,9 @@
-use convert_by_name::ByNameInto;
+use convert_by_name::ConvertByName;
 
 #[test]
 fn test_into_struct() {
-    #[derive(ByNameInto)]
-    #[by_name_into(Vec2D)]
+    #[derive(ConvertByName)]
+    #[into(Vec2D)]
     struct Point2D {
         x: i32,
         y: i32,
@@ -21,8 +21,8 @@ fn test_into_struct() {
 
 #[test]
 fn test_into_tuple_struct() {
-    #[derive(ByNameInto)]
-    #[by_name_into(Vec2D)]
+    #[derive(ConvertByName)]
+    #[into(Vec2D)]
     struct Point2D(i32, i32);
 
     #[derive(PartialEq, Debug)]
@@ -34,8 +34,8 @@ fn test_into_tuple_struct() {
 
 #[test]
 fn test_into_nested_conversions() {
-    #[derive(ByNameInto)]
-    #[by_name_into(Vec2D)]
+    #[derive(ConvertByName)]
+    #[into(Vec2D)]
     struct Point2D(i32, i32);
 
     #[derive(PartialEq, Debug)]
@@ -47,8 +47,8 @@ fn test_into_nested_conversions() {
 
 #[test]
 fn test_into_plain_enum() {
-    #[derive(ByNameInto)]
-    #[by_name_into(ColorDst)]
+    #[derive(ConvertByName)]
+    #[into(ColorDst)]
     enum ColorSrc {
         Red,
         Green,
@@ -74,8 +74,8 @@ fn test_into_plain_enum() {
 
 #[test]
 fn test_into_enum() {
-    #[derive(ByNameInto)]
-    #[by_name_into(ColorDst)]
+    #[derive(ConvertByName)]
+    #[into(ColorDst)]
     enum ColorSrc {
         Red(i32),
         Green { level: i32 },
