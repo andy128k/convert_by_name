@@ -45,6 +45,6 @@ struct Vec2D {
 }
 
 let point = Point2D { x: 3, y: 4 };
-let vector: Vec2D = point.into();
+let vector: Vec2D = point.into(); // `into` is derived
 assert_eq!(vector, Vec2D { x: 3, y: 4 });
 ```

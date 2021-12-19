@@ -1,3 +1,5 @@
+//! Procedural macros to derive `std::convert::From` and `std::convert::Into` implementations based on field/variant names.
+
 mod convert;
 mod utils;
 
@@ -9,6 +11,29 @@ use syn::{parse_macro_input, DeriveInput, Path};
 use convert::{convert_data_type, template_from, template_into};
 use utils::concat_tokens;
 
+/// Derive an implementaion of `std::convert::From`
+///
+/// ## Example
+///
+/// ```rust
+/// use convert_by_name::ByNameFrom;
+///
+/// struct Point2D {
+///     x: i32,
+///     y: i32,
+/// }
+///
+/// #[derive(PartialEq, Debug, ByNameFrom)]
+/// #[by_name_from(Point2D)]
+/// struct Vec2D {
+///     x: i32,
+///     y: i32,
+/// }
+///
+/// let point = Point2D { x: 3, y: 4 };
+/// let vector = Vec2D::from(point); // `from` is derived
+/// assert_eq!(vector, Vec2D { x: 3, y: 4 });
+/// ```
 #[proc_macro_error]
 #[proc_macro_derive(ByNameFrom, attributes(by_name_from))]
 pub fn by_name_from(input: TokenStream) -> TokenStream {
@@ -29,6 +54,30 @@ pub fn by_name_from(input: TokenStream) -> TokenStream {
         .into()
 }
 
+/// Derive an implementaion of `std::convert::Into`
+///
+/// ## Example
+///
+/// ```rust
+/// use convert_by_name::ByNameInto;
+///
+/// #[derive(ByNameInto)]
+/// #[by_name_into(Vec2D)]
+/// struct Point2D {
+///     x: i32,
+///     y: i32,
+/// }
+///
+/// #[derive(PartialEq, Debug)]
+/// struct Vec2D {
+///     x: i32,
+///     y: i32,
+/// }
+///
+/// let point = Point2D { x: 3, y: 4 };
+/// let vector: Vec2D = point.into(); // `into` is derived
+/// assert_eq!(vector, Vec2D { x: 3, y: 4 });
+/// ```
 #[proc_macro_error]
 #[proc_macro_derive(ByNameInto, attributes(by_name_into))]
 pub fn by_name_into(input: TokenStream) -> TokenStream {
