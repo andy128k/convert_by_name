@@ -4,12 +4,9 @@ mod convert;
 mod utils;
 
 use proc_macro::TokenStream;
-use proc_macro_error::proc_macro_error;
-use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
 
 use convert::Convert;
-use utils::concat_tokens;
 
 /// Derive an implementaion of `std::convert::From` and `std::convert::Into`.
 ///
@@ -68,15 +65,11 @@ use utils::concat_tokens;
 /// let c2: Color = c1.into();
 /// assert_eq!(c2, Color::Green);
 /// ```
-#[proc_macro_error]
 #[proc_macro_derive(ConvertByName, attributes(from, into))]
 pub fn convert_by_name(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    input
-        .attrs
-        .iter()
-        .filter_map(Convert::from_attribute)
-        .map(|convert| convert.generate(&input))
-        .fold(quote!(), concat_tokens)
+    Convert::new(input)
+        .map(|c| c.generate_all())
+        .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }

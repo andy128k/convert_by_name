@@ -1,25 +1,52 @@
 use proc_macro2::TokenStream;
-use proc_macro_error::{abort_call_site, ResultExt};
 use quote::{format_ident, quote, ToTokens};
 use syn::{
-    Attribute, Data, DeriveInput, Fields, FieldsNamed, FieldsUnnamed, Generics, Ident, Path,
+    Attribute, Data, DataEnum, DataStruct, DeriveInput, Error as SynError, Fields, FieldsNamed,
+    FieldsUnnamed, Generics, Ident, Path, Result as SynResult,
 };
 
-pub enum Convert {
+use crate::utils::concat_tokens;
+
+pub enum ConvertData {
+    Struct(DataStruct),
+    Enum(DataEnum),
+}
+
+pub enum ConvertOpts {
     From(Path),
     Into(Path),
 }
 
-impl Convert {
-    pub fn from_attribute(attr: &Attribute) -> Option<Self> {
-        if attr.path.is_ident("from") {
-            let src_type = attr.parse_args::<Path>().unwrap_or_abort();
-            Some(Convert::From(src_type))
-        } else if attr.path.is_ident("into") {
-            let dst_type = attr.parse_args::<Path>().unwrap_or_abort();
-            Some(Convert::Into(dst_type))
+pub struct Convert {
+    pub ident: Ident,
+    pub generics: Generics,
+    pub data: ConvertData,
+    pub opts: Vec<ConvertOpts>,
+}
+
+impl ConvertData {
+    pub fn from_data(data: Data) -> SynResult<Self> {
+        match data {
+            Data::Struct(s) => Ok(ConvertData::Struct(s)),
+            Data::Enum(e) => Ok(ConvertData::Enum(e)),
+            Data::Union(u) => Err(SynError::new(
+                u.union_token.span,
+                "Deriving of ConvertByName is not supported for union types.",
+            )),
+        }
+    }
+}
+
+impl ConvertOpts {
+    pub fn from_attribute(attr: &Attribute) -> SynResult<Option<Self>> {
+        if attr.path().is_ident("from") {
+            let src_type = attr.parse_args::<Path>()?;
+            Ok(Some(ConvertOpts::From(src_type)))
+        } else if attr.path().is_ident("into") {
+            let dst_type = attr.parse_args::<Path>()?;
+            Ok(Some(ConvertOpts::Into(dst_type)))
         } else {
-            None
+            Ok(None)
         }
     }
 
@@ -36,31 +63,54 @@ impl Convert {
             Self::Into(destination) => destination.to_token_stream(),
         }
     }
-
-    pub fn template(&self, ident: &Ident, generics: &Generics, body: TokenStream) -> TokenStream {
-        match self {
-            Self::From(src_type) => template_from(ident, generics, src_type, body),
-            Self::Into(dst_type) => template_into(ident, generics, dst_type, body),
-        }
-    }
-
-    pub fn generate(&self, input: &DeriveInput) -> TokenStream {
-        let body = convert_data_type(&input.data, self.src_type(), self.dst_type());
-        self.template(&input.ident, &input.generics, body)
-    }
 }
 
-pub fn convert_data_type(
-    data: &Data,
-    src_type: impl ToTokens,
-    dst_type: impl ToTokens,
-) -> TokenStream {
-    match data {
-        Data::Struct(ref data_struct) => convert_struct(data_struct, &src_type, dst_type),
-        Data::Enum(ref data_enum) => convert_enum(data_enum, &src_type, dst_type),
-        Data::Union(..) => {
-            abort_call_site!("Deriving convert by name is not supported for union types.");
+impl Convert {
+    pub fn new(input: DeriveInput) -> SynResult<Self> {
+        let mut all_opts = vec![];
+        for attr in &input.attrs {
+            if let Some(opts) = ConvertOpts::from_attribute(attr)? {
+                all_opts.push(opts);
+            }
         }
+        if all_opts.is_empty() {
+            return Err(SynError::new(
+                input.ident.span(),
+                "Deriving of ConvertByName requires at least one `from`/`into` attribute.",
+            ));
+        }
+        Ok(Self {
+            ident: input.ident,
+            generics: input.generics,
+            data: ConvertData::from_data(input.data)?,
+            opts: all_opts,
+        })
+    }
+
+    fn generate(&self, opts: &ConvertOpts) -> TokenStream {
+        let src_type = opts.src_type();
+        let dst_type = opts.dst_type();
+
+        let body = match self.data {
+            ConvertData::Struct(ref d) => convert_struct(d, src_type, dst_type),
+            ConvertData::Enum(ref d) => convert_enum(d, src_type, dst_type),
+        };
+
+        match opts {
+            ConvertOpts::From(src_type) => {
+                template_from(&self.ident, &self.generics, src_type, body)
+            }
+            ConvertOpts::Into(dst_type) => {
+                template_into(&self.ident, &self.generics, dst_type, body)
+            }
+        }
+    }
+
+    pub fn generate_all(&self) -> TokenStream {
+        self.opts
+            .iter()
+            .map(|opts| self.generate(opts))
+            .fold(quote!(), concat_tokens)
     }
 }
 
