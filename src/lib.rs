@@ -1,4 +1,4 @@
-//! Procedural macro to derive `std::convert::From` and `std::convert::Into` implementations based on field/variant names.
+//! Procedural macro to derive `core::convert::From` and `core::convert::Into` implementations based on field/variant names.
 
 mod convert;
 mod utils;
@@ -8,7 +8,7 @@ use syn::{parse_macro_input, DeriveInput};
 
 use convert::Convert;
 
-/// Derive an implementaion of `std::convert::From` and `std::convert::Into`.
+/// Derive an implementaion of `core::convert::From` and `core::convert::Into`.
 ///
 /// ## Examples
 ///

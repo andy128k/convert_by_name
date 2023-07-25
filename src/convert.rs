@@ -181,7 +181,7 @@ fn fields_convert_parts(fields: &syn::Fields) -> ConvertParts {
                 },
                 construct: quote! {
                     {#(
-                        #field_ident: std::convert::Into::into(#field_ident)
+                        #field_ident: core::convert::Into::into(#field_ident)
                     ),*}
                 },
             }
@@ -199,7 +199,7 @@ fn fields_convert_parts(fields: &syn::Fields) -> ConvertParts {
                 },
                 construct: quote! {
                     (#(
-                        std::convert::Into::into(#field_ident)
+                        core::convert::Into::into(#field_ident)
                     ),*)
                 },
             }
@@ -218,7 +218,7 @@ pub fn template_from(
     body: TokenStream,
 ) -> TokenStream {
     quote! {
-        impl #generics std::convert::From<#src_type> for #ident #generics {
+        impl #generics core::convert::From<#src_type> for #ident #generics {
             fn from(value: #src_type) -> Self {
                 #body
             }
@@ -234,7 +234,7 @@ pub fn template_into(
 ) -> TokenStream {
     quote! {
         #[allow(clippy::from_over_into)]
-        impl #generics std::convert::Into<#dst_type> for #ident #generics {
+        impl #generics core::convert::Into<#dst_type> for #ident #generics {
             fn into(self) -> #dst_type {
                 let value = self;
                 #body
