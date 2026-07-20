@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote, ToTokens};
+use quote::{ToTokens, format_ident, quote};
 use syn::{
     Attribute, Data, DataEnum, DataStruct, DeriveInput, Error as SynError, Fields, FieldsNamed,
     FieldsUnnamed, Generics, Ident, Path, Result as SynResult,
