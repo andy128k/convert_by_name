@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote};
 use syn::{
     Attribute, Data, DataEnum, DataStruct, DeriveInput, Error as SynError, Fields, FieldsNamed,
-    FieldsUnnamed, Generics, Ident, Path, Result as SynResult,
+    FieldsUnnamed, Generics, Ident, Result as SynResult, Type,
 };
 
 use crate::utils::concat_tokens;
@@ -13,8 +13,8 @@ pub enum ConvertData {
 }
 
 pub enum ConvertOpts {
-    From(Path),
-    Into(Path),
+    From(Type),
+    Into(Type),
 }
 
 pub struct Convert {
@@ -40,10 +40,10 @@ impl ConvertData {
 impl ConvertOpts {
     pub fn from_attribute(attr: &Attribute) -> SynResult<Option<Self>> {
         if attr.path().is_ident("from") {
-            let src_type = attr.parse_args::<Path>()?;
+            let src_type = attr.parse_args::<Type>()?;
             Ok(Some(ConvertOpts::From(src_type)))
         } else if attr.path().is_ident("into") {
-            let dst_type = attr.parse_args::<Path>()?;
+            let dst_type = attr.parse_args::<Type>()?;
             Ok(Some(ConvertOpts::Into(dst_type)))
         } else {
             Ok(None)
@@ -214,11 +214,12 @@ fn fields_convert_parts(fields: &syn::Fields) -> ConvertParts {
 pub fn template_from(
     ident: &Ident,
     generics: &Generics,
-    src_type: &Path,
+    src_type: &Type,
     body: TokenStream,
 ) -> TokenStream {
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     quote! {
-        impl #generics core::convert::From<#src_type> for #ident #generics {
+        impl #impl_generics core::convert::From<#src_type> for #ident #ty_generics #where_clause {
             fn from(value: #src_type) -> Self {
                 #body
             }
@@ -229,12 +230,13 @@ pub fn template_from(
 pub fn template_into(
     ident: &Ident,
     generics: &Generics,
-    dst_type: &Path,
+    dst_type: &Type,
     body: TokenStream,
 ) -> TokenStream {
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     quote! {
         #[allow(clippy::from_over_into)]
-        impl #generics core::convert::Into<#dst_type> for #ident #generics {
+        impl #impl_generics core::convert::Into<#dst_type> for #ident #ty_generics #where_clause {
             fn into(self) -> #dst_type {
                 let value = self;
                 #body

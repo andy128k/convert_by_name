@@ -98,3 +98,22 @@ fn test_into_enum() {
     let blue: ColorDst = ColorSrc::Blue.into();
     assert_eq!(blue, ColorDst::Blue);
 }
+
+#[test]
+fn test_into_struct_generic() {
+    #[derive(ConvertByName)]
+    #[into(Vec2D::<T>)]
+    struct Point2D<T> {
+        x: T,
+        y: T,
+    }
+
+    #[derive(PartialEq, Debug)]
+    struct Vec2D<T> {
+        x: T,
+        y: T,
+    }
+
+    let v: Vec2D<i32> = Point2D { x: 3, y: 4 }.into();
+    assert_eq!(v, Vec2D { x: 3, y: 4 });
+}
