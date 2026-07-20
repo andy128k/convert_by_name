@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 
 pub fn concat_tokens(t1: impl ToTokens, t2: impl ToTokens) -> TokenStream {
     quote! {
