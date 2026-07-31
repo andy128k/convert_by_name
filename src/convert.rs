@@ -1,8 +1,9 @@
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote};
 use syn::{
-    Attribute, Data, DataEnum, DataStruct, DeriveInput, Error as SynError, Fields, FieldsNamed,
-    FieldsUnnamed, Generics, Ident, Result as SynResult, Type,
+    Attribute, ConstParam, Data, DataEnum, DataStruct, DeriveInput, Error as SynError, Fields,
+    FieldsNamed, FieldsUnnamed, GenericArgument, GenericParam, Generics, Ident, LifetimeParam,
+    Result as SynResult, Token, Type, TypeParam, token::Comma,
 };
 
 use crate::utils::concat_tokens;
@@ -57,12 +58,80 @@ impl ConvertOpts {
         }
     }
 
+    pub fn src_generics(&self) -> Vec<GenericParam> {
+        match self {
+            Self::From(source) => extract_generics_from_type(source),
+            Self::Into(_) => vec![],
+        }
+    }
+
     pub fn dst_type(&self) -> TokenStream {
         match self {
             Self::From(_) => quote!(Self),
             Self::Into(destination) => destination.to_token_stream(),
         }
     }
+
+    pub fn dst_geenerics(&self) -> Vec<GenericParam> {
+        match self {
+            Self::From(_) => vec![],
+            Self::Into(destination) => extract_generics_from_type(destination),
+        }
+    }
+}
+
+/// Recursive function to extract all generic types from a Type
+fn extract_generics_from_type(ty: &Type) -> Vec<GenericParam> {
+    let mut generics = Vec::<GenericParam>::new();
+
+    fn process(ty: &Type, out: &mut Vec<GenericParam>) {
+        match ty {
+            Type::Path(type_path) => {
+                for segment in &type_path.path.segments {
+                    if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+                        for arg in &args.args {
+                            match arg {
+                                GenericArgument::Lifetime(lifetime) => {
+                                    out.push(GenericParam::Lifetime(LifetimeParam::new(
+                                        lifetime.clone(),
+                                    )));
+                                }
+                                GenericArgument::Type(ty) => {
+                                    out.push(GenericParam::Type(TypeParam::from(ty.ident())));
+                                    process(ty, out);
+                                }
+                                // GenericArgument::Const(expr) => {
+                                //     out.push(GenericParam::Const(ConstParam::from(expr.clone())));
+                                // }
+                                GenericArgument::Const(..)
+                                | GenericArgument::AssocType(..)
+                                | GenericArgument::AssocConst(..)
+                                | GenericArgument::Constraint(..) => {}
+                            }
+                        }
+                    }
+                }
+            }
+            Type::Tuple(tuple) => {
+                for elem in &tuple.elems {
+                    process(elem, out);
+                }
+            }
+            Type::Slice(slice) => {
+                process(&slice.elem, out);
+            }
+            Type::Array(arr) => {
+                process(&arr.elem, out);
+            }
+            Type::Reference(refr) => {
+                process(&refr.elem, out);
+            }
+            _ => {}
+        }
+    }
+
+    process(ty, &mut generics);
+    generics
 }
 
 impl Convert {
@@ -96,13 +165,26 @@ impl Convert {
             ConvertData::Enum(ref d) => convert_enum(d, src_type, dst_type),
         };
 
+        let src_type_generics = opts.src_generics();
+        let dst_type_generics = opts.dst_geenerics();
+
         match opts {
-            ConvertOpts::From(src_type) => {
-                template_from(&self.ident, &self.generics, src_type, body)
-            }
-            ConvertOpts::Into(dst_type) => {
-                template_into(&self.ident, &self.generics, dst_type, body)
-            }
+            ConvertOpts::From(src_type) => template_from(
+                &self.ident,
+                &self.generics,
+                src_type_generics,
+                dst_type_generics,
+                src_type,
+                body,
+            ),
+            ConvertOpts::Into(dst_type) => template_into(
+                &self.ident,
+                &self.generics,
+                src_type_generics,
+                dst_type_generics,
+                dst_type,
+                body,
+            ),
         }
     }
 
@@ -214,9 +296,19 @@ fn fields_convert_parts(fields: &syn::Fields) -> ConvertParts {
 pub fn template_from(
     ident: &Ident,
     generics: &Generics,
+    src_type_generics: Vec<GenericParam>,
+    dst_type_generics: Vec<GenericParam>,
     src_type: &Type,
     body: TokenStream,
 ) -> TokenStream {
+    let mut generics = generics.clone();
+    for t in src_type_generics {
+        generics.params.push(t);
+    }
+    for t in dst_type_generics {
+        generics.params.push(t);
+    }
+
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     quote! {
         impl #impl_generics core::convert::From<#src_type> for #ident #ty_generics #where_clause {
@@ -230,9 +322,19 @@ pub fn template_from(
 pub fn template_into(
     ident: &Ident,
     generics: &Generics,
+    src_type_generics: Vec<GenericParam>,
+    dst_type_generics: Vec<GenericParam>,
     dst_type: &Type,
     body: TokenStream,
 ) -> TokenStream {
+    let mut generics = generics.clone();
+    for t in src_type_generics {
+        generics.params.push(t);
+    }
+    for t in dst_type_generics {
+        generics.params.push(t);
+    }
+
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     quote! {
         #[allow(clippy::from_over_into)]
